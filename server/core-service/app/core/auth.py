@@ -5,10 +5,10 @@ from app.db.database import get_db
 import bcrypt
 
 def verify_password(plain_password, hashed_password):
-    return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
+    return bcrypt.hashpw(str(plain_password), hashed_password) == hashed_password
 
 def get_password_hash(password):
-    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    return bcrypt.hashpw(str(password), bcrypt.gensalt())
 
 def authenticate_user(db: Session, username: str, password: str):
     user = db.query(UserModel).filter(UserModel.username == username).first()
