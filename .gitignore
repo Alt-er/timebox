@@ -1,0 +1,9 @@
+# PostgreSQL data
+data/postgres/
+
+# Docker volumes
+docker-compose.override.yml 
+
+.DS_Store
+
+.env
