@@ -52,7 +52,7 @@ app.add_middleware(
 
 # 将 items 和 record 路由添加到主路由器
 root_router.include_router(items_router, prefix="/items", tags=["items"])
-root_router.include_router(image_router, prefix="/image", tags=["image"], dependencies=[Depends(get_current_user)])
+root_router.include_router(image_router, prefix="/image", tags=["image"]) # dependencies=[Depends(get_current_user)]
 root_router.include_router(auth_router, prefix="/auth", tags=["auth"])
 
 # 根路由也添加到主路由器

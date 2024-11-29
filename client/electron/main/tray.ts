@@ -8,6 +8,9 @@ import { writeConfig } from "./config";
 
 let tray: Tray | null = null; // 添加托盘变量
 
+// 添加设置窗口的引用
+let settingsWindow: BrowserWindow | null = null;
+
 // 创建托盘
 export function createTray() {
   let icon = nativeImage.createFromPath(
@@ -60,11 +63,13 @@ export function updateTrayMenu(isCapturing: boolean) {
 
 // 创建设置窗口
 export function createSettingsWindow() {
-  
+  // 如果设置窗口已经存在，则聚焦并返回
+  if (settingsWindow) {
+    settingsWindow.focus();
+    return;
+  }
 
-  const settingsWindow = new BrowserWindow({
-    // width: 300,
-    // height: 200,
+  settingsWindow = new BrowserWindow({
     title: "设置",
     webPreferences: {
       preload,
@@ -73,14 +78,19 @@ export function createSettingsWindow() {
     },
   });
 
-  
   if (VITE_DEV_SERVER_URL) {
     settingsWindow.loadURL(`${VITE_DEV_SERVER_URL}#/settings`);
   } else {
     settingsWindow.loadFile(indexHtml, { hash: "settings" });
   }
+
+  // 监听窗口关闭事件，清除引用
+  settingsWindow.on('closed', () => {
+    settingsWindow = null;
+  });
+
   if (process.platform === "darwin") {
-    app.dock.show(); // 显示 Dock 图标
+    app.dock.show();
   }
 }
 

@@ -1,7 +1,6 @@
 import { app, ipcMain } from "electron";
 import path from "path";
 import fs from "fs";
-import { resetCaptureIntervalTime } from "./record";
 
 export const baseDir = path.join(app.getPath("home"), ".timebox");
 export const defaultScreenshotDir = path.join(baseDir, "screenshots");
@@ -11,13 +10,14 @@ let cachedConfig: any = null;
 
 // 定义完整的配置类型
 interface Config {
-  captureIntervalTime: number;
-  pushIntervalTime: number;
-  serverUrl: string;
-  username: string;
+  captureIntervalTime: number; // 截图间隔
+  pushIntervalTime: number; // 推送间隔
+  similarityThreshold: number; // 相似度阈值
+  maxImagesPerPush: number; // 每次推送的最大截图数量
+  screenshotDir: string; // 截图目录
+  serverUrl: string; // 服务器URL
+  username: string; // 用户名
   password: string;
-  maxImagesPerPush: number;
-  screenshotDir: string;
 }
 
 // 读取配置
@@ -35,7 +35,8 @@ export function readConfig(): Config {
       password: "",
       captureIntervalTime: 5000, // 截图间隔
       maxImagesPerPush: 5, // 每次推送的最大截图数量
-      pushIntervalTime: 10000,
+      pushIntervalTime: 10000, // 推送间隔
+      similarityThreshold: 96, // 相似度阈值
       screenshotDir: defaultScreenshotDir,
     }; // 默认值
   }
@@ -46,10 +47,7 @@ export function readConfig(): Config {
 export function writeConfig(config: Partial<Config>) {
   const newConfig = { ...cachedConfig, ...config };
   fs.writeFileSync(configPath, JSON.stringify(newConfig, null, 2));
-  // 重置截图间隔时间
-  if (newConfig.captureIntervalTime !== cachedConfig.captureIntervalTime) {
-    resetCaptureIntervalTime();
-  }
+  console.log("写入配置成功", newConfig);
   cachedConfig = newConfig; // 更新缓存
 }
 

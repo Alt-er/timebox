@@ -62,7 +62,7 @@ async function pushImages() {
 }
 
 export function startPushInterval() {
-  const config = readConfig();
+ 
   
   async function schedulePush() {
     try {
@@ -70,7 +70,7 @@ export function startPushInterval() {
     } catch (error) {
       console.error('推送图片时发生错误:', error);
     } finally {
-      setTimeout(schedulePush, config.pushIntervalTime);  // 无论成功失败都继续调度
+      setTimeout(schedulePush, readConfig().pushIntervalTime);  // 无论成功失败都继续调度
     }
   }
 

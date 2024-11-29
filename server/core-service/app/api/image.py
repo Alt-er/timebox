@@ -15,6 +15,11 @@ from fastapi import Depends
 from app.db.database import get_db
 from app.models.image import Image as ImageModel
 from datetime import datetime
+from sqlalchemy import select
+from sqlalchemy.orm import aliased
+from app.models.image_ocr import ImageOCR
+from fastapi.responses import FileResponse
+from datetime import datetime, timedelta
 
 # 设置日志
 logging.basicConfig(level=logging.INFO)
@@ -25,6 +30,11 @@ class UploadImageResponse(BaseModel):
     status: int
     id: int
  
+
+# 添加请求模型
+class SearchRequest(BaseModel):
+    query: str
+    type: int
 
 router = APIRouter()
 
@@ -43,15 +53,14 @@ def get_image_metadata(image_content: bytes) -> dict:
         if hasattr(image, '_getexif'):
             exif = image._getexif()
             if exif:
-                for tag_id in exif:
-                    tag = TAGS.get(tag_id, tag_id)
-                    if tag == 'ImageDescription':
-                        desc = exif.get(tag_id)
-                        try:
-                            metadata = json.loads(desc)
-                            return metadata
-                        except json.JSONDecodeError as e:
-                            break
+                # 直接获取ImageDescription对应的tag_id
+                desc = exif.get(0x010e)  # 0x010e是ImageDescription的标准tag_id
+                if desc:
+                    try:
+                        metadata = json.loads(desc)
+                        return metadata
+                    except json.JSONDecodeError:
+                        pass
     except Exception as e:
         pass
     
@@ -125,55 +134,90 @@ async def upload_image(
         logger.error(f"处理上传请求时发生错误: {str(e)}")
         raise HTTPException(status_code=500, detail="服务器内部错误")
 
-# @router.get("/{item_id}", response_model=Item)
-# async def read_item(item_id: str):
-#     # 添加简单的错误处理
-#     if item_id not in ["Foo", "Bar"]:
-#         raise HTTPException(status_code=404, detail="Item not found")
-    
-#     return {"item_id": item_id, "name": f"{item_id} Item", "description": f"This is {item_id}"}
-    # 确保上传目录存在
-    os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
-    
-    # 读取文件内容
-    content = await file.read()
-    
-    # 读取EXIF信息
-    exif_data = {}
-    image_metadata = {}
+@router.post("/search")
+async def search_images(
+    search_data: SearchRequest,
+    db: Session = Depends(get_db)
+):
     try:
-        image = Image.open(BytesIO(content))
-        if hasattr(image, '_getexif'):
-            exif = image._getexif()
-            if exif:
-                for tag_id in exif:
-                    tag = TAGS.get(tag_id, tag_id)
-                    data = exif.get(tag_id)
-                    exif_data[tag] = data
-                    
-                # 解析 ImageDescription 中的 JSON 数据
-                if 'ImageDescription' in exif_data:
-                    try:
-                        image_metadata = json.loads(exif_data['ImageDescription'])
-                        logger.info(f"解析后的元数据: {image_metadata}")
-                    except json.JSONDecodeError as e:
-                        logger.error(f"JSON解析失败: {str(e)}")
-                        
-        logger.info(f"EXIF信息: {exif_data}")
-    except Exception as e:
-        logger.error(f"读取EXIF信息失败: {str(e)}")
-    
-    # 保存文件
-    with open(save_path, "wb") as f:
-        f.write(content)
-    
-    # 返回符合 Item 模型的字典
-    return {"id": 1, "exif_data": exif_data, "metadata": image_metadata}
+        # 处理搜索关键词
+        query = search_data.query.strip()
+        
+        # 使用 SQLAlchemy 查询数据库
+        ImageAlias = aliased(ImageModel)
+        ImageOcrAlias = aliased(ImageOCR)
 
-# @router.get("/{item_id}", response_model=Item)
-# async def read_item(item_id: str):
-#     # 添加简单的错误处理
-#     if item_id not in ["Foo", "Bar"]:
-#         raise HTTPException(status_code=404, detail="Item not found")
-    
-#     return {"item_id": item_id, "name": f"{item_id} Item", "description": f"This is {item_id}"}
+        if not query:
+            # 如果查询为空，直接按截图时间倒序返回
+            stmt = (
+                select(ImageAlias.file_path, ImageOcrAlias.ocr_metadata)
+                .join(ImageOcrAlias, ImageAlias.id == ImageOcrAlias.id)
+                .order_by(ImageAlias.captured_at.desc())
+                .limit(50)
+            )
+        else:
+            # 有查询词时使用全文检索
+            keywords = query.split()
+            processed_query = ' & '.join(keywords)
+            stmt = (
+                select(ImageAlias.file_path, ImageOcrAlias.ocr_metadata)
+                .join(ImageOcrAlias, ImageAlias.id == ImageOcrAlias.id)
+                .where(ImageOcrAlias.search_vector.match(processed_query))
+                .limit(50)
+            )
+
+        results = db.execute(stmt).all()
+
+        # 处理结果，移除 position 字段
+        processed_results = []
+        for result in results:
+            metadata = result.ocr_metadata
+            if metadata and 'ocr_result' in metadata:
+                for item in metadata['ocr_result']:
+                    if 'position' in item:
+                        del item['position']
+                    if 'confidence' in item:
+                        item['confidence'] = round(item['confidence'] * 100)
+            
+            processed_results.append({
+                "file_path": result.file_path,
+                "ocr_metadata": metadata
+            })
+
+        return {
+            "status": 200,
+            "results": processed_results
+        }
+
+    except Exception as e:
+        logger.error(f"处理搜索请求时发生错误: {str(e)}")
+        raise HTTPException(status_code=500, detail="服务器内部错误")
+
+@router.get("/{directory}/{filename}")
+async def get_image(directory: str, filename: str):
+    try:
+        # 构建完整的文件路径
+        file_path = os.path.join(settings.UPLOAD_DIR, directory, filename)
+        
+        # 检查文件是否存在
+        if not os.path.exists(file_path):
+            raise HTTPException(status_code=404, detail="图片未找到")
+            
+        # 设置缓存时间（30天）
+        cache_time = 30 * 24 * 60 * 60  # 30天的秒数
+        
+        # 返回图片文件，设置 Content-Disposition 为 inline
+        return FileResponse(
+            file_path,
+            media_type="image/webp",
+            headers={
+                "Cache-Control": f"public, max-age={cache_time}",
+                "Content-Disposition": "inline"
+            }
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"获取图片时发生错误: {str(e)}")
+        raise HTTPException(status_code=500, detail="服务器内部错误")
