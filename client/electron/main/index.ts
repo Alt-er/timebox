@@ -108,6 +108,7 @@ app.whenReady().then(() => {
   createTray();
   startPushInterval();
   // 不创建主窗口
+  // createWindow();
 });
 
 app.on("window-all-closed", () => {
@@ -131,9 +132,7 @@ app.on("activate", () => {
   const allWindows = BrowserWindow.getAllWindows();
   if (allWindows.length) {
     allWindows[0].focus();
-  } else {
-    createWindow();
-  }
+  } 
 });
 
 // New window example arg: new windows url

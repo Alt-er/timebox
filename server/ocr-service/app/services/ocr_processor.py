@@ -14,16 +14,23 @@ class OCRProcessor:
         """
         初始化OCR处理器
         Args:
-            use_gpu: 是否使用GPU加速,默认False
+            use_gpu: 是否使用GPU加速,默认True
         """
         config_path = "ocr_config.yaml"  # 确保配置路径正确
-
-        if platform.system() == 'Windows' and 'Intel' in cpuinfo.get_cpu_info()['brand_raw']:
-            from rapidocr_openvino import RapidOCR
-            self.ocr = RapidOCR(config_path=config_path)
+        
+        if platform.system() == "Darwin":
+            from ocrmac import ocrmac
+            self.ocr = ocrmac.OCR
+            self.is_mac = True
         else:
-            from rapidocr_onnxruntime import RapidOCR
-            self.ocr = RapidOCR(config_path=config_path)
+            self.is_mac = False
+            if platform.system() == 'Windows' and 'Intel' in cpuinfo.get_cpu_info()['brand_raw']:
+                from rapidocr_openvino import RapidOCR
+                self.ocr = RapidOCR(config_path=config_path)
+            else:
+                from rapidocr_onnxruntime import RapidOCR
+                self.ocr = RapidOCR(config_path=config_path)
+        
         self.executor = ThreadPoolExecutor(max_workers=4)  # 创建线程池
         self.logger = logging.getLogger(__name__)  # 在__init__中添加logger
     
@@ -40,18 +47,11 @@ class OCRProcessor:
         
         start_time = time.time()  # 开始计时
 
-        if platform.system() == "Darwin":
-            from ocrmac import ocrmac
-            result = ocrmac.OCR(image_path, language_preference=['zh-Hans']).recognize(px=True)
-            # print(result)
+        if self.is_mac:
+            result = self.ocr(image_path, language_preference=['zh-Hans']).recognize(px=True)
         else:
-            # with Image.open(image_path) as img:  # 修正变量名为image_path
-            #     img = img.convert("RGB")
-            #     img.thumbnail((1920, 1920))  # 假设MAX_THUMBNAIL_SIZE为(800, 800)
-            #     img_array = np.array(img)
-            # result, _ = self.ocr(img_array)  # 确保调用ocr方法
             result, _ = self.ocr(image_path)  # 确保调用ocr方法
-            # print(result)
+        
         end_time = time.time()  # 结束计时
         self.logger.info(f"OCR处理耗时: {end_time - start_time:.2f}秒")  # 替换print为logger.info
 

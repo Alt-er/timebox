@@ -20,6 +20,8 @@ from sqlalchemy.orm import aliased
 from app.models.image_ocr import ImageOCR
 from fastapi.responses import FileResponse
 from datetime import datetime, timedelta
+from sqlalchemy.sql import func
+from sqlalchemy.sql import text
 
 # 设置日志
 logging.basicConfig(level=logging.INFO)
@@ -35,6 +37,10 @@ class UploadImageResponse(BaseModel):
 class SearchRequest(BaseModel):
     query: str
     type: int
+    startDate: str | None = None
+    endDate: str | None = None
+    limit: int = 20  # 每次加载数量
+    last_id: int | None = None  # 游标ID
 
 router = APIRouter()
 
@@ -140,31 +146,48 @@ async def search_images(
     db: Session = Depends(get_db)
 ):
     try:
-        # 处理搜索关键词
         query = search_data.query.strip()
         
-        # 使用 SQLAlchemy 查询数据库
+        # 基础查询
         ImageAlias = aliased(ImageModel)
         ImageOcrAlias = aliased(ImageOCR)
-
+        
         if not query:
-            # 如果查询为空，直接按截图时间倒序返回
-            stmt = (
+            # 没有查询词时，仅按照截图时间倒序
+            base_query = (
                 select(ImageAlias.file_path, ImageOcrAlias.ocr_metadata)
                 .join(ImageOcrAlias, ImageAlias.id == ImageOcrAlias.id)
-                .order_by(ImageAlias.captured_at.desc())
-                .limit(50)
             )
         else:
-            # 有查询词时使用全文检索
+            # 有查询词时，计算匹配分数并按分数倒序
             keywords = query.split()
             processed_query = ' & '.join(keywords)
-            stmt = (
-                select(ImageAlias.file_path, ImageOcrAlias.ocr_metadata)
+            base_query = (
+                select(
+                    ImageAlias.file_path, 
+                    ImageOcrAlias.ocr_metadata,
+                    func.ts_rank(ImageOcrAlias.search_vector, func.to_tsquery('simple', processed_query)).label('rank')
+                )
                 .join(ImageOcrAlias, ImageAlias.id == ImageOcrAlias.id)
                 .where(ImageOcrAlias.search_vector.match(processed_query))
-                .limit(50)
             )
+
+        # 添加日期过滤条件
+        if search_data.startDate:
+            start_date = datetime.strptime(search_data.startDate, "%Y-%m-%d %H:%M:%S")
+            base_query = base_query.where(ImageAlias.captured_at >= start_date)
+        
+        if search_data.endDate:
+            end_date = datetime.strptime(search_data.endDate, "%Y-%m-%d %H:%M:%S")
+            base_query = base_query.where(ImageAlias.captured_at <= end_date)
+
+        # 添加排序条件
+        if not query:
+            stmt = base_query.order_by(ImageAlias.captured_at.desc())
+        else:
+            stmt = base_query.order_by(text('rank DESC'), ImageAlias.captured_at.desc())
+        
+        stmt = stmt.limit(50)
 
         results = db.execute(stmt).all()
 

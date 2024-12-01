@@ -1,36 +1,45 @@
-import axios from 'axios';
-import { login } from '@/services/authService';
+import axios from "axios";
+import { login } from "@/services/authService";
+import { isElectron } from "./ipc";
+import { message } from "antd";
+import pkg from '../../package.json';
 
 const apiClient = axios.create({
-//   baseURL: process.env.API_BASE_URL,
+  //   baseURL: process.env.API_BASE_URL,
   withCredentials: true,
+  headers: {
+    'X-Client-Version': pkg.version
+  }
 });
 
-let retryCount = 0;
-const maxRetries = 3;
-
 apiClient.interceptors.response.use(
-  response => response,
-  async error => {
+  (response) => response,
+  async (error) => {
     const originalRequest = error.config;
-   
-    if (error.response && error.response.status === 401 && retryCount < maxRetries) {
-      const config = await window.ipcRenderer.invoke("readConfig");
-      const { serverUrl, username, password } = config;
-      retryCount += 1;
-      const loginSuccess = await login(serverUrl, username, password);
-      if (loginSuccess) {
-        retryCount = 0;
-        return apiClient(originalRequest);
-      }
+
+    if (error.response?.status === 401) {
+      window.location.hash = "#/login";
+      message.error("登录已过期，请重新登录");
+      return Promise.reject({
+        ...error.response,
+        data: {
+          status: 401,
+          message: "登录已过期，请重新登录",
+        },
+      });
     }
 
-    if (retryCount >= maxRetries) {
-      console.error('重试次数达到上限，停止重试');
+    if (error.response) {
+      return Promise.reject(error.response);
+    } else {
+      return Promise.reject({
+        data: {
+          status: -1,
+          message: error.message,
+        },
+      });
     }
-
-    return Promise.reject(error);
   }
 );
 
-export default apiClient; 
+export default apiClient;

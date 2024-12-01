@@ -4,15 +4,18 @@ import path from "node:path";
 import sharp from "sharp";
 import { screen, desktopCapturer } from "electron";
 import { updateTrayMenu } from "./tray";
-import FormData from "form-data"; // 添加这一行
-import axios from "axios";
 let captureInterval: NodeJS.Timeout | null = null; // 定时器变量
-import { execSync } from "child_process";
 import koffi from "koffi";
 import { imageHash } from "image-hash";
 
+// 修改动态库加载路径
+const isDev = process.env.NODE_ENV === 'development'
+const libPath = isDev 
+  ? path.join('oc/libActiveApp.dylib')
+  : path.join(process.resourcesPath, 'app.asar.unpacked/oc/libActiveApp.dylib')
+
 // 加载动态库
-const lib = koffi.load("oc/libActiveApp.dylib");
+const lib = koffi.load(libPath)
 
 // 定义 ActiveAppInfo 结构体
 const ActiveAppInfo = koffi.struct("ActiveAppInfo", {
@@ -61,16 +64,16 @@ async function getActiveWindowInfo(): Promise<WindowInfo> {
 }
 
 // 测试打印活动窗口信息和耗时
-const startTime = performance.now();
-const windowInfo = getActiveWindowInfo();
-windowInfo.then((info) => {
-  const endTime = performance.now();
-  console.log("活动窗口信息:", info);
-  console.log("获取窗口信息耗时:", endTime - startTime, "ms");
-});
+// const startTime = performance.now();
+// const windowInfo = getActiveWindowInfo();
+// windowInfo.then((info) => {
+//   const endTime = performance.now();
+//   console.log("活动窗口信息:", info);
+//   console.log("获取窗口信息耗时:", endTime - startTime, "ms");
+// });
 
 // 开始记录
-export function startCapture() {
+export async function startCapture() {
   if (!captureInterval) {
     async function scheduleCapture() {
       try {
@@ -82,7 +85,7 @@ export function startCapture() {
       }
     }
 
-    scheduleCapture(); // 开始第一次执行
+    await scheduleCapture(); // 开始第一次执行
     console.log("开始定时截图");
     updateTrayMenu(true);
   }
@@ -236,7 +239,7 @@ function compareRecentScreenshotsAndDelete(currentBinary: string, filePath: stri
 
 function calculateImageHash(filePath: string): Promise<string> {
   return new Promise((resolve, reject) => {
-    imageHash(filePath, 16, true, (error, data) => {
+    imageHash(filePath, 16, true, (error: any, data: any) => {
       if (error) {
         reject("计算哈希值失败: " + error);
       } else if (typeof data !== "string") {

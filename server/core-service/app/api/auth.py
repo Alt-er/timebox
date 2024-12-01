@@ -16,7 +16,10 @@ class LoginRequest(BaseModel):
 @router.post("/logout")
 async def logout(request: Request):
     logout_user(request)
-    return {"message": "Logout successful"}
+    return {
+        "status": 200,
+        "message": "登出成功"
+    }
 
 @router.post("/login")
 async def login(request: Request, login_request: LoginRequest, db: Session = Depends(get_db)):

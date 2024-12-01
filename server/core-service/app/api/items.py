@@ -4,7 +4,6 @@ from fastapi import APIRouter, HTTPException, UploadFile, File
 from typing import List
 from pydantic import BaseModel
 import os
-from app.services.ocr_processor import OCRProcessor
 from sqlalchemy.orm import Session
 from fastapi import Depends
 from app.db.database import get_db

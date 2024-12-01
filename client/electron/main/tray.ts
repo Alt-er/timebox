@@ -1,10 +1,10 @@
-import { BrowserWindow, ipcMain, nativeImage, session, Tray } from "electron";
+import { BrowserWindow, ipcMain, nativeImage, session, Tray, shell } from "electron";
 import path from "node:path";
 import { Menu } from "electron";
 import { stopCapture, startCapture } from "./record";
 import { app } from "electron";
 import { preload, indexHtml, VITE_DEV_SERVER_URL } from "./index";
-import { writeConfig } from "./config";
+import { writeConfig, readConfig } from "./config";
 
 let tray: Tray | null = null; // 添加托盘变量
 
@@ -31,7 +31,7 @@ export function createTray() {
     });
   }
   tray = new Tray(icon);
-  tray.setToolTip("您的应用名称");
+  tray.setToolTip("Timebox");
   updateTrayMenu(false);
 
   tray.on("click", () => {
@@ -41,19 +41,29 @@ export function createTray() {
 
 // 更新托盘菜单
 export function updateTrayMenu(isCapturing: boolean) {
+  const config = readConfig();
+  const serverUrl = config.serverUrl?.trim();
+
   const contextMenu = Menu.buildFromTemplate([
+    {
+      label: "Timebox",
+      enabled: !!serverUrl,
+      click: () => {
+        shell.openExternal(serverUrl || 'http://localhost:3000');
+      },
+    },
     {
       label: isCapturing ? "停止记录" : "开始记录",
       click: isCapturing ? stopCapture : startCapture,
     },
     {
       label: "设置",
-      click: createSettingsWindow, // 点击时打开设置窗口
+      click: createSettingsWindow,
     },
     {
       label: "退出",
       click: () => {
-        stopCapture(); // 退出前停止定时截图
+        stopCapture();
         app.quit();
       },
     },
@@ -71,6 +81,7 @@ export function createSettingsWindow() {
 
   settingsWindow = new BrowserWindow({
     title: "设置",
+    icon: path.join(process.env.VITE_PUBLIC, "favicon.ico"),
     webPreferences: {
       preload,
       // nodeIntegration: true,

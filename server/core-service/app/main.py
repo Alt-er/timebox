@@ -14,6 +14,7 @@ from app.models.user import User
 from app.core.auth import get_password_hash
 import os
 from app.services.scheduler import OCRScheduler
+import uvicorn
 
 ocr_scheduler = OCRScheduler()
 
@@ -52,7 +53,7 @@ app.add_middleware(
 
 # 将 items 和 record 路由添加到主路由器
 root_router.include_router(items_router, prefix="/items", tags=["items"])
-root_router.include_router(image_router, prefix="/image", tags=["image"]) # dependencies=[Depends(get_current_user)]
+root_router.include_router(image_router, prefix="/image", tags=["image"] ,dependencies=[Depends(get_current_user)]) # 
 root_router.include_router(auth_router, prefix="/auth", tags=["auth"])
 
 # 根路由也添加到主路由器
@@ -92,6 +93,26 @@ async def startup_event():
 @app.on_event("shutdown")
 async def shutdown_event():
     ocr_scheduler.stop()
+
+def dev():
+    """开发环境启动函数"""
+    uvicorn.run(
+        "app.main:app",
+        host="0.0.0.0",
+        port=8000,
+        reload=True,  # 启用热重载
+        log_level="debug"
+    )
+
+def start():
+    """生产环境启动函数"""
+    uvicorn.run(
+        "app.main:app",
+        host="0.0.0.0",
+        port=8000,
+        workers=4,  # 生产环境使用多个工作进程
+        log_level="info"
+    )
 
 
 
