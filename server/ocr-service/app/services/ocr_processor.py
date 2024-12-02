@@ -19,8 +19,7 @@ class OCRProcessor:
         config_path = "ocr_config.yaml"  # 确保配置路径正确
         
         if platform.system() == "Darwin":
-            from ocrmac import ocrmac
-            self.ocr = ocrmac.OCR
+           
             self.is_mac = True
         else:
             self.is_mac = False
@@ -46,9 +45,10 @@ class OCRProcessor:
             raise FileNotFoundError(f"图片文件不存在: {image_path}")
         
         start_time = time.time()  # 开始计时
-
+      
         if self.is_mac:
-            result = self.ocr(image_path, language_preference=['zh-Hans']).recognize(px=True)
+            from ocrmac import ocrmac
+            result = ocrmac.OCR(image_path, language_preference=['zh-Hans']).recognize(px=True)
         else:
             result, _ = self.ocr(image_path)  # 确保调用ocr方法
         

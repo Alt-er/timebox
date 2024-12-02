@@ -88,6 +88,6 @@ def start():
         "app.main:app",
         host=settings.OCR_SERVER_HOST,
         port=settings.OCR_SERVER_PORT,  # 使用配置中的端口
-        workers=4,
-        log_level="info"
+        # workers=4,
+        log_level="debug"
     )

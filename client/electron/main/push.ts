@@ -5,7 +5,7 @@ import FormData from "form-data"; // 添加这一行
 import axios, { Axios, AxiosError } from "axios";
 import { session, Notification } from "electron";
 import { login } from "./auth";
-import pkg from '../../package.json'
+import pkg from "../../package.json";
 // 添加错误通知的时间记录
 let lastErrorNotificationTime = 0;
 const ONE_HOUR = 60 * 60 * 1000; // 1小时的毫秒数
@@ -27,17 +27,17 @@ async function uploadScreenshot(
         headers: {
           ...formData.getHeaders(),
           Cookie: currentCookieString,
-          'X-Client-Version': pkg.version
+          "X-Client-Version": pkg.version,
         },
       }
     );
 
     if (response.data.status === 200) {
       fs.unlinkSync(filePath);
-    //   new Notification({
-    //     title: '截图上传成功',
-    //     body: path.basename(filePath)
-    //   }).show();
+      //   new Notification({
+      //     title: '截图上传成功',
+      //     body: path.basename(filePath)
+      //   }).show();
       return true;
     }
     throw new Error("上传失败: " + response.data.message);
@@ -52,21 +52,23 @@ async function uploadScreenshot(
         // 尝试重新登录
         const config = readConfig();
         await login(config.serverUrl, config.username, config.password);
-        
+
         // 重新获取 cookies
         const cookies = await session.defaultSession.cookies.get({});
         const newCookieString = cookies
           .map((cookie) => `${cookie.name}=${cookie.value}`)
           .join("; ");
-        
+
         // 重新发起请求
         await doUpload(newCookieString);
       } catch (retryError) {
-        showErrorNotification('重新登录后上传仍然失败');
+        showErrorNotification("重新登录后上传仍然失败");
       }
     } else {
       // 处理其他错误，限制通知频率
-      showErrorNotification('上传失败: ' + (axiosError.message || '未知错误'));
+      showErrorNotification(
+        "上传失败: " + (axiosError.message || axiosError.code || "未知错误")
+      );
     }
   }
 }
@@ -76,8 +78,8 @@ function showErrorNotification(message: string) {
   const now = Date.now();
   if (now - lastErrorNotificationTime > ONE_HOUR) {
     new Notification({
-      title: '截图上传失败',
-      body: message
+      title: "截图上传失败",
+      body: message,
     }).show();
     lastErrorNotificationTime = now;
   }
@@ -110,17 +112,15 @@ async function pushImages() {
 }
 
 export function startPushInterval() {
- 
-  
   async function schedulePush() {
     try {
       await pushImages();
     } catch (error) {
-      console.error('推送图片时发生错误:', error);
+      console.error("推送图片时发生错误:", error);
     } finally {
-      setTimeout(schedulePush, readConfig().pushIntervalTime);  // 无论成功失败都继续调度
+      setTimeout(schedulePush, readConfig().pushIntervalTime); // 无论成功失败都继续调度
     }
   }
 
-  schedulePush();  // 开始第一次执行
+  schedulePush(); // 开始第一次执行
 }

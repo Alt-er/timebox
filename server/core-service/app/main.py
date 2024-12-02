@@ -110,10 +110,6 @@ def start():
         "app.main:app",
         host="0.0.0.0",
         port=8000,
-        workers=4,  # 生产环境使用多个工作进程
-        log_level="info"
+        # workers=4,  # 生产环境使用多个工作进程
+        log_level="debug"
     )
-
-
-
-
