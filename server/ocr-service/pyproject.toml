@@ -7,7 +7,7 @@ readme = "README.md"
 packages = [{include = "app"}]  # 指定包含 app 目录
 
 [tool.poetry.dependencies]
-python = ">=3.12,<3.13"
+python = "^3.12"
 fastapi = "^0.115.5"
 py-cpuinfo = "^9.0.0"
 pillow = "^11.0.0"
