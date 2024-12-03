@@ -8,9 +8,10 @@ import numpy as np  # 确保导入numpy库
 from concurrent.futures import ThreadPoolExecutor
 import asyncio
 import logging  # 添加在文件开头的import部分
+from app.core.config import settings
 
 class OCRProcessor:
-    def __init__(self, use_gpu: bool = True):
+    def __init__(self):
         """
         初始化OCR处理器
         Args:
@@ -19,16 +20,28 @@ class OCRProcessor:
         config_path = "ocr_config.yaml"  # 确保配置路径正确
         
         if platform.system() == "Darwin":
-           
             self.is_mac = True
         else:
             self.is_mac = False
-            if platform.system() == 'Windows' and 'Intel' in cpuinfo.get_cpu_info()['brand_raw']:
-                from rapidocr_openvino import RapidOCR
-                self.ocr = RapidOCR(config_path=config_path)
+            if settings.USE_GPU:
+                try:
+                    from rapidocr_paddle import RapidOCR as RapidOCRPaddle
+                    self.ocr = RapidOCRPaddle(
+                        det_use_cuda=True, 
+                        cls_use_cuda=True, 
+                        rec_use_cuda=True
+                    )
+                    self.logger.info("使用RapidOCR Paddle (GPU)初始化OCR")
+                except ImportError:
+                    self.logger.error("导入rapidocr_paddle失败。请确保已安装GPU版本。")
+                    raise
             else:
-                from rapidocr_onnxruntime import RapidOCR
-                self.ocr = RapidOCR(config_path=config_path)
+                if platform.system() == 'Windows' and 'Intel' in cpuinfo.get_cpu_info()['brand_raw']:
+                    from rapidocr_openvino import RapidOCR
+                    self.ocr = RapidOCR(config_path=config_path)
+                else:
+                    from rapidocr_onnxruntime import RapidOCR
+                    self.ocr = RapidOCR(config_path=config_path)
         
         self.executor = ThreadPoolExecutor(max_workers=4)  # 创建线程池
         self.logger = logging.getLogger(__name__)  # 在__init__中添加logger

@@ -866,6 +866,30 @@ six = ">=1.15.0"
 tqdm = "*"
 
 [[package]]
+name = "rapidocr-paddle"
+version = "1.4.0"
+description = "A cross platform OCR Library based on PaddlePaddle."
+optional = false
+python-versions = "<3.13,>=3.6"
+files = [
+    {file = "rapidocr_paddle-1.4.0-py3-none-any.whl", hash = "sha256:dd80344c99317769add503304723091d91cdd6aecc307b21902440d5b7479278"},
+]
+
+[package.dependencies]
+numpy = ">=1.19.5,<3.0.0"
+opencv-python = ">=4.5.1.48"
+Pillow = "*"
+pyclipper = ">=1.2.0"
+PyYAML = "*"
+Shapely = ">=1.7.1,<2.0.4 || >2.0.4"
+six = ">=1.15.0"
+tqdm = "*"
+
+[package.extras]
+cpu = ["paddlepaddle"]
+gpu = ["paddlepaddle-gpu"]
+
+[[package]]
 name = "shapely"
 version = "2.0.6"
 description = "Manipulation and analysis of geometric objects"
@@ -1032,4 +1056,4 @@ standard = ["colorama (>=0.4)", "httptools (>=0.6.3)", "python-dotenv (>=0.13)",
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.12,<3.13"
-content-hash = "6ffbd5e3c28da0dcdde57ea6a3c61b9f7a2050251b17b5742450137db3b80e33"
+content-hash = "811a6521d6a6e9fb08d69e3c7b7382ad9b4796075182c7cd1d4a72f629f0ba03"

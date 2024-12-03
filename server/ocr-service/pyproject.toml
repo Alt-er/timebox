@@ -17,6 +17,7 @@ ocrmac = {version = "^1.0.0", markers = "sys_platform == 'darwin'"}
 python-multipart = "^0.0.19"
 uvicorn = "^0.32.1"
 rapidocr-onnxruntime = "^1.4.0"
+rapidocr-paddle = "^1.4.0"
 
 [tool.poetry.scripts]
 dev = "app.main:dev"
