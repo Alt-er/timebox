@@ -6,6 +6,7 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "OCR Service"
     OCR_API_TOKEN: str = "your-secret-ocr-token"  # 这里设置固定的token
     USE_GPU: bool = False  # 添加GPU配置选项
+    USE_DML: bool = False  # 添加DML配置选项
     
     # CORS配置
     CORS_ORIGINS: list[str] = ["http://localhost", "http://localhost:5174"]

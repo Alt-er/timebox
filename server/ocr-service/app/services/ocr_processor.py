@@ -19,12 +19,15 @@ class OCRProcessor:
         """
         config_path = "ocr_config.yaml"  # 确保配置路径正确
         
+        self.executor = ThreadPoolExecutor(max_workers=4)  # 创建线程池
+        self.logger = logging.getLogger(__name__)  # 在__init__中添加logger
+
         if platform.system() == "Darwin":
             self.is_mac = True
         else:
             self.is_mac = False
-            if settings.USE_GPU:
-                try:
+            try:
+                if settings.USE_GPU:
                     from rapidocr_paddle import RapidOCR as RapidOCRPaddle
                     self.ocr = RapidOCRPaddle(
                         det_use_cuda=True, 
@@ -32,19 +35,30 @@ class OCRProcessor:
                         rec_use_cuda=True
                     )
                     self.logger.info("使用RapidOCR Paddle (GPU)初始化OCR")
-                except ImportError:
-                    self.logger.error("导入rapidocr_paddle失败。请确保已安装GPU版本。")
-                    raise
-            else:
-                if platform.system() == 'Windows' and 'Intel' in cpuinfo.get_cpu_info()['brand_raw']:
-                    from rapidocr_openvino import RapidOCR
-                    self.ocr = RapidOCR(config_path=config_path)
-                else:
+                elif settings.USE_DML:  # 添加DML判断
                     from rapidocr_onnxruntime import RapidOCR
-                    self.ocr = RapidOCR(config_path=config_path)
+                    self.ocr = RapidOCR(
+                        config_path=config_path,
+                        det_use_dml=True,
+                        cls_use_dml=True,
+                        rec_use_dml=True
+                    )
+                    self.logger.info("使用RapidOCR ONNX (DML)初始化OCR")
+                else:
+                    # CPU模式
+                    if platform.system() == 'Windows' and 'Intel' in cpuinfo.get_cpu_info()['brand_raw']:
+                        from rapidocr_openvino import RapidOCR
+                        self.ocr = RapidOCR(config_path=config_path)
+                        self.logger.info("使用RapidOCR OpenVINO (CPU)初始化OCR")
+                    else:
+                        from rapidocr_onnxruntime import RapidOCR
+                        self.ocr = RapidOCR(config_path=config_path)
+                        self.logger.info("使用RapidOCR ONNX (CPU)初始化OCR")
+            except Exception as e:
+                self.logger.error(f"OCR初始化失败: {str(e)}")
+                raise
         
-        self.executor = ThreadPoolExecutor(max_workers=4)  # 创建线程池
-        self.logger = logging.getLogger(__name__)  # 在__init__中添加logger
+        
     
     def process_image(self, image_path: str) -> List[Dict[str, Any]]:
         """
