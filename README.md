@@ -90,7 +90,9 @@ Visit `http://{server IP}:8000` to access the web interface. Configure this addr
 #### Method 2: Manual Deployment
 
 > Note: Manual deployment supports both CPU and GPU modes for OCR services.
+> 
 > macOS uses GPU acceleration automatically without extra configuration, while Windows requires manual configuration for DML mode.
+> 
 > You can manually deploy OCR services on macOS or Windows, while using Docker for other services.
 
 ##### 1. Install Miniconda and PostgreSQL

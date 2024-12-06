@@ -88,7 +88,9 @@ docker compose up -d
 #### 方式 2：手动部署
 
 > 注意：手动部署方式支持 CPU 和 GPU 模式运行 OCR 服务。
+> 
 > macOS 系统会自动使用 GPU 加速无需额外配置，Windows 系统需要手动配置 DML 模式才能使用 GPU。
+> 
 > 可在 macOS 或 Windows 系统上手动部署 OCR 服务。其余服务使用 Docker 部署。
 
 ##### 1. 安装 Miniconda 与 PostgreSQL
