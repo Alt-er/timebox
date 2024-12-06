@@ -7,3 +7,6 @@ docker-compose.override.yml
 .DS_Store
 
 .env
+
+frpc.yaml
+server/core-service/static/*

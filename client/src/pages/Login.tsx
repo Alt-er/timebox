@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { login } from "@/services/authService";
+import { isElectron, readConfig } from "@/utils/ipc";
+import { message } from "antd";
 
 interface LoginForm {
   serverUrl: string;
@@ -8,74 +10,62 @@ interface LoginForm {
   password: string;
 }
 
-interface ToastState {
-  isVisible: boolean;
-  message: string;
-  type: "info" | "success" | "error";
-}
+const validateServerUrl = (url: string): boolean => {
+  const urlPattern = /^https?:\/\/[a-zA-Z0-9][-a-zA-Z0-9.]*(?::\d+)?$/;
+  return urlPattern.test(url);
+};
 
 const Login = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState<LoginForm>({
-    serverUrl: "",
+    serverUrl: localStorage.getItem('lastServerUrl') || "",
     username: "",
     password: "",
   });
 
-  const [toast, setToast] = useState<ToastState>({
-    isVisible: false,
-    message: "",
-    type: "info",
-  });
-
   useEffect(() => {
-    window.ipcRenderer.invoke("readConfig").then((config) => {
-      const { serverUrl, username, password } = config;
-      setFormData({ serverUrl, username, password });
-    });
+    const loadConfig = async () => {
+      if (isElectron()) {
+        const { serverUrl, username, password } = await readConfig();
+        setFormData({ serverUrl, username, password });
+      }
+    };
+    loadConfig();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.serverUrl || !formData.username || !formData.password) {
-      console.error("请填写完整的登录信息");
+      message.error("请填写完整的登录信息");
       return;
     }
 
-    const loginSuccess = await login(formData.serverUrl, formData.username, formData.password);
-
-    if (loginSuccess) {
-      setToast({ isVisible: true, message: "登录成功", type: "success" });
-      setTimeout(() => {
-        navigate("/settings");
-      }, 350);
-    } else {
-      setToast({ isVisible: true, message: "登录失败", type: "error" });
+    if (!validateServerUrl(formData.serverUrl)) {
+      message.error("服务地址格式不正确，应为 http(s)://域名(:端口) 的格式");
+      return;
     }
 
-    setTimeout(() => {
-      setToast((prev) => ({ ...prev, isVisible: false }));
-    }, 3000);
+    localStorage.setItem('lastServerUrl', formData.serverUrl);
+
+    const [loginSuccess, msg] = await login(
+      formData.serverUrl,
+      formData.username,
+      formData.password
+    );
+
+    if (loginSuccess) {
+      message.success(msg);
+      navigate("/settings");
+    } else {
+      message.error(msg);
+    }
   };
 
   return (
     <div className="min-h-screen bg-base-200 flex items-center justify-center">
-      <div
-        className={`toast toast-top toast-center transition-opacity duration-300 ${
-          toast.isVisible ? "opacity-100" : "opacity-0"
-        }`}
-      >
-        <div
-          className={`alert ${
-            toast.type === "success" ? "alert-success" : "alert-error"
-          }`}
-        >
-          <span>{toast.message}</span>
-        </div>
-      </div>
       <div className="card w-96 bg-base-100 shadow-xl">
-        <div className="card-body">
+        <form className="card-body" onSubmit={handleSubmit}>
           <h2 className="card-title text-2xl font-bold text-center mb-4">
             登录
           </h2>
@@ -83,13 +73,17 @@ const Login = () => {
             <label className="input input-bordered flex items-center gap-2">
               服务地址
               <input
-                type="text"
+                type="url"
+                name="serverUrl"
                 className="grow"
-                placeholder="https://localhost:8000"
+                placeholder="http://localhost:8000"
                 value={formData.serverUrl}
                 onChange={(e) =>
                   setFormData({ ...formData, serverUrl: e.target.value })
                 }
+                pattern="^https?:\/\/[a-zA-Z0-9][-a-zA-Z0-9.]*(?::\d+)?$"
+                title="请输入正确的服务地址格式：http(s)://域名(:端口)"
+                autoComplete="url"
               />
             </label>
           </div>
@@ -98,12 +92,14 @@ const Login = () => {
               用户名
               <input
                 type="text"
+                name="username"
                 className="grow"
                 placeholder="请输入用户名"
                 value={formData.username}
                 onChange={(e) =>
                   setFormData({ ...formData, username: e.target.value })
                 }
+                autoComplete="username"
               />
             </label>
           </div>
@@ -113,12 +109,14 @@ const Login = () => {
               密码
               <input
                 type="password"
+                name="password"
                 className="grow"
                 placeholder="请输入密码"
                 value={formData.password}
                 onChange={(e) =>
                   setFormData({ ...formData, password: e.target.value })
                 }
+                autoComplete="current-password"
               />
             </label>
             <label className="label">
@@ -129,11 +127,11 @@ const Login = () => {
           </div>
 
           <div className="form-control mt-6">
-            <button className="btn btn-primary" onClick={handleSubmit}>
+            <button type="submit" className="btn btn-primary">
               登录
             </button>
           </div>
-        </div>
+        </form>
       </div>
     </div>
   );

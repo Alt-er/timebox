@@ -6,11 +6,60 @@ services:
     image: pgvector/pgvector:pg17
     container_name: postgres
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
-      TZ: Asia/Shanghai  # 设置时区为上海时区
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: ${POSTGRES_DB:-app_db}
+      TZ: Asia/Shanghai
     ports:
-      - "${POSTGRES_PORT}:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - ./data/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  ocr-service:
+    image: alterzz/timebox-ocr-service
+    container_name: ocr-service
+    environment:
+      - PROJECT_NAME=OCR Service
+      - OCR_API_TOKEN=${OCR_API_TOKEN:-token1}
+      - OCR_SERVER_HOST=0.0.0.0
+      - OCR_SERVER_PORT=8001
+      - USE_DML=${USE_DML:-false}
+      - OCR_NUM_WORKERS=${OCR_NUM_WORKERS:-1}
+    # ports:
+    #   - "8001:8001"
+
+  core-service:
+    image: alterzz/timebox-core-service
+    container_name: core-service
+    environment:
+      - PROJECT_NAME=Core Service
+      - UPLOAD_DIR=/app/uploads/screenshots
+      - POSTGRES_SERVER=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-password}
+      - POSTGRES_DB=${POSTGRES_DB:-app_db}
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key}
+      - OCR_SERVICE_URLS=${OCR_SERVICE_URLS:-http://ocr-service:8001/ocr}
+      - OCR_SERVICE_TOKENS=${OCR_SERVICE_TOKENS:-token1}
+      - DEFAULT_USERNAME=${DEFAULT_USERNAME:-admin}
+      - DEFAULT_PASSWORD=${DEFAULT_PASSWORD:-defaultpassword}
+      - OCR_CONCURRENT_LIMIT=${OCR_CONCURRENT_LIMIT:-1}
+    volumes:
+      - ./uploads:/app/uploads
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ocr-service:
+        condition: service_started
+
+# 使用命名卷
+# volumes:
+#   postgres_data:

@@ -2,6 +2,7 @@
 
 import logging
 from fastapi import FastAPI, APIRouter, Request, Depends, HTTPException
+from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 from app.api.items import router as items_router
 from app.api.image import router as image_router
@@ -14,6 +15,7 @@ from app.models.user import User
 from app.core.auth import get_password_hash
 import os
 from app.services.scheduler import OCRScheduler
+import uvicorn
 
 ocr_scheduler = OCRScheduler()
 
@@ -43,25 +45,29 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost",
-        "http://localhost:5174",
+        "http://localhost:5173",
     ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# 将 items 和 record 路由添加到主路由器
+# 添加 API 路由
 root_router.include_router(items_router, prefix="/items", tags=["items"])
 root_router.include_router(image_router, prefix="/image", tags=["image"], dependencies=[Depends(get_current_user)])
 root_router.include_router(auth_router, prefix="/auth", tags=["auth"])
+
+# 将主路由器添加到 app
+app.include_router(root_router)
+
+# 挂载静态文件目录
+app.mount("/timebox", StaticFiles(directory="static", html=True), name="static")
+
 
 # 根路由也添加到主路由器
 @root_router.get("/")
 async def read_root():
     return {"message": "Welcome to the API"}
-
-# 最后将主路由器添加到 app
-app.include_router(root_router)
 
 # 在应用启动时创建所有表并添加默认用户
 @app.on_event("startup")
@@ -93,6 +99,22 @@ async def startup_event():
 async def shutdown_event():
     ocr_scheduler.stop()
 
+def dev():
+    """开发环境启动函数"""
+    uvicorn.run(
+        "app.main:app",
+        host="0.0.0.0",
+        port=8000,
+        reload=True,  # 启用热重载
+        log_level="debug"
+    )
 
-
-
+def start():
+    """生产环境启动函数"""
+    uvicorn.run(
+        "app.main:app",
+        host="0.0.0.0",
+        port=8000,
+        # workers=4,  # 生产环境使用多个工作进程
+        log_level="debug"
+    )
