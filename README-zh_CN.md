@@ -88,7 +88,8 @@ docker compose up -d
 #### 方式 2：手动部署
 
 > 注意：手动部署方式支持 CPU 和 GPU 模式运行 OCR 服务。
-> 目前仅windows和MacOS支持GPU模式, 用户可在 macOS 或 Windows 系统上手动部署 OCR 服务。其余服务使用 Docker 部署。
+> macOS 系统会自动使用 GPU 加速无需额外配置，Windows 系统需要手动配置 DML 模式才能使用 GPU。
+> 可在 macOS 或 Windows 系统上手动部署 OCR 服务。其余服务使用 Docker 部署。
 
 ##### 1. 安装 Miniconda 与 PostgreSQL
 - 访问 [Miniconda官方文档](https://docs.anaconda.com/miniconda/install/#quick-command-line-install) 获取安装指南
@@ -116,7 +117,7 @@ pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
 
 ```
 
-##### CPU 模式运行(MacOS会直接使用GPU不需要执行以下命令)
+##### OpenVINO CPU 模式运行(可选，仅支持Intel CPU)
 ```bash
 # Intel CPU 
 pip install rapidocr-openvino 
@@ -125,7 +126,7 @@ pip install rapidocr-openvino -i https://pypi.tuna.tsinghua.edu.cn/simple
 
 ```
 
-###### GPU DML 模式运行(MacOS会直接使用GPU不需要执行以下命令)
+###### DirectML GPU 模式运行(可选，仅支持Windows)
 ```bash
 # 创建环境配置文件
 echo USE_DML=true > .env
