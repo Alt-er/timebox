@@ -2,7 +2,7 @@
 
 # Timebox
 
-> Turning every moment on your screen into accessible memories  
+> Turning every screen moment into a memory at your fingertips.
 
 Timebox is an open-source screen recording and retrieval tool consisting of a client and a server. The client captures screenshots at fixed intervals and uploads them to the server. The server stores the screenshots, performs OCR (optical character recognition) processing, and supports quick searches based on time ranges and text content. With Timebox, users can easily revisit and quickly locate past moments, creating their own "screen moment search engine."
 
