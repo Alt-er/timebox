@@ -49,16 +49,27 @@ Timebox 客户端支持 **macOS** 和 **Windows** 平台，您可以按照以下
    - macOS：双击 `.dmg` 文件并将 Timebox 拖拽至应用程序文件夹。  
    - Windows：双击 `.exe` 文件并按照安装向导完成安装。  
 3. 安装完成后，启动客户端并查看系统托盘(windows)或者菜单栏(macOS)是否有 Timebox 图标，如果有，则表示安装成功。
-4. 启动客户端后，点击设置进行服务端配置。
+4. 启动客户端后，点击设置进行服务端配置(需要先配置好服务端)。
+5. 配置完成后，点击`开始记录`按钮，客户端会开始自动截取屏幕并上传至服务端。
 
 
 ### 服务端部署  
 
 Timebox 服务端支持 **Linux**、**macOS** 和 **Windows** 平台，您可以选择以下两种方式之一进行部署：  
 
-#### 方式 1：使用 Docker 部署（仅支持 CPU）
+> OCR 服务支持以下运行模式：
 
-> 注意：Docker 部署方式仅支持 CPU 模式运行 OCR 服务。如果需要使用 GPU 加速 OCR 识别，请手动部署 OCR 服务(其余服务仍可使用 Docker 部署)。
+| 编号 | 部署方式 | 操作系统 | CPU 模式 | GPU 模式 | 备注 |
+|-----|---------|---------|----------|-----------|------|
+| 1 | Docker | Linux   | ✓ 支持   | ✓ 支持 CUDA | 需要 NVIDIA 显卡和驱动，可通过 nvidia-smi 命令检查 |
+| 2 | Docker | Windows | ✓ 支持   | ✓ 支持 CUDA | 需使用 WSL2 + Docker，支持 NVIDIA 显卡 |
+| 3 | 手动部署 | Windows | ✓ 支持   | ✓ 支持 DirectML | 支持多种显卡，包括 NVIDIA、AMD、Intel |
+| 4 | 手动部署 | macOS   | ✓ 支持   | ✓ 支持 MPS | 支持 Apple Silicon 和 Intel 芯片，自动启用 GPU 加速 |
+| 5 | 手动部署 | Linux   | ✓ 支持   | ✓ 支持 CUDA | 需要 NVIDIA 显卡和驱动 |
+
+#### 方式 1：使用 Docker 部署
+
+> windows系统请进入wsl环境后执行, 需要安装wsl2和docker desktop
 
 ##### 1. 创建并进入项目目录
 ```bash
@@ -79,11 +90,43 @@ curl https://raw.githubusercontent.com/Alt-er/timebox/main/docker-compose.yml -o
 # 编辑环境配置文件
 vi .env
 
+# 在编辑环境配置文件时，需要根据实际情况修改以下配置项：
+
+# TZ: 时区设置，默认为 Asia/Shanghai
+
+# 数据库相关配置
+# POSTGRES_USER: PostgreSQL数据库用户名
+# POSTGRES_PASSWORD: PostgreSQL数据库密码
+# POSTGRES_DB: PostgreSQL数据库名称
+# POSTGRES_PORT: PostgreSQL数据库端口号，默认5432
+
+# 网页管理相关配置
+# SECRET_KEY: session加密使用的key，建议使用随机字符串，务必修改默认值
+# DEFAULT_USERNAME: 设置默认管理员用户名，用于登录服务端网页
+# DEFAULT_PASSWORD: 设置默认管理员密码，用于登录服务端网页
+
+# OCR服务配置
+# OCR_CONCURRENT_LIMIT: 最大并发OCR任务数，根据服务器性能调整
+# OCR_SERVICE_URLS: OCR服务地址，多个地址用逗号分隔
+# OCR_API_TOKEN: OCR服务认证令牌，确保core-service和ocr-service中的值一致
+# USE_CUDA: 是否启用CUDA GPU加速（需要NVIDIA显卡），注释不启用, 设置为true启用
+# USE_DML: 是否启用DirectML GPU加速（仅Windows系统支持），true/false，默认false
+# OCR_NUM_WORKERS: OCR服务工作进程数
+# OCR_SERVICE_TOKENS: OCR服务认证令牌列表，多个令牌用逗号分隔，必须与core-service中的OCR_API_TOKEN匹配
+
+# 示例配置文件内容：
+
+# 部署方式1 和 部署方式2的配置是一样的, 区别是windows环境需要提前装好wsl2和docker desktop, 然后在wsl环境中执行docker命令, 本质上都是linux
+SECRET_KEY=11111111111111
+DEFAULT_USERNAME=admin
+DEFAULT_PASSWORD=admin
+USE_CUDA=true   # 如果有cuda加速, 请设置为true, 否则不要这一行, 不能设置为false
+
 # 启动服务
 docker compose up -d
 ```
 ##### 4. 访问服务
-访问 http://{服务端IP}:8000 即可访问服务端网页。请在客户端中也配置这个地址。
+访问`http://{服务端IP}:8000/timebox`即可访问服务端网页。请在客户端中配置`http://{服务端IP}:8000`这个地址。
 
 #### 方式 2：手动部署
 
@@ -182,7 +225,7 @@ python run.py
 ```
 
 ##### 5. 访问服务
-访问 http://{服务端IP}:8000 即可访问服务端网页。请在客户端中也配置这个地址。
+访问`http://{服务端IP}:8000/timebox`即可访问服务端网页。请在客户端中配置`http://{服务端IP}:8000`这个地址。
 
 
 #### Conda 常用命令
