@@ -1,0 +1,56 @@
+# 基于 nvidia/cuda 镜像，使用 CUDA 12.6.3 和 CUDNN
+FROM nvidia/cuda:12.6.3-cudnn-devel-rockylinux9
+
+# 安装 wget 和其他必要的工具
+RUN dnf install -y wget && \
+    dnf clean all
+
+# 安装 Miniconda
+RUN mkdir -p /root/miniconda3 && \
+    wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /root/miniconda3/miniconda.sh && \
+    bash /root/miniconda3/miniconda.sh -b -u -p /root/miniconda3 && \
+    rm -rf /root/miniconda3/miniconda.sh
+
+# 初始化 Conda
+RUN /root/miniconda3/bin/conda init --all
+
+# 创建并激活虚拟环境 ocr-service
+RUN /root/miniconda3/bin/conda create -n ocr-service python=3.12 -y
+
+# 确保容器每次启动时自动激活 ocr-service 环境
+RUN echo "conda activate ocr-service" >> ~/.bashrc
+
+# 使用 conda 激活环境并安装 PaddlePaddle GPU 版本
+RUN /root/miniconda3/bin/conda run -n ocr-service pip install paddlepaddle-gpu==2.6.2.post120 -i https://www.paddlepaddle.org.cn/packages/stable/cu120/
+
+# 安装并升级 GCC
+RUN /root/miniconda3/bin/conda run -n ocr-service conda install -c conda-forge gcc=12.2.0 -y
+
+# 修改环境变量
+# ENV LD_LIBRARY_PATH=/root/miniconda3/lib:$LD_LIBRARY_PATH
+ENV LD_LIBRARY_PATH=/root/miniconda3/envs/ocr-service/lib:$LD_LIBRARY_PATH
+
+# 设置工作目录
+WORKDIR /app
+
+# 复制依赖文件
+COPY requirements.txt .
+
+# 使用 conda 激活环境并安装 Python 依赖
+RUN /root/miniconda3/bin/conda run -n ocr-service pip install --no-cache-dir -r requirements.txt
+
+# 复制项目文件
+COPY . .
+
+# 设置环境变量
+ENV PYTHONPATH=/app \
+    PROJECT_NAME="OCR Service" \
+    OCR_API_TOKEN="your-secret-ocr-token" \
+    OCR_SERVER_HOST="0.0.0.0" \
+    OCR_SERVER_PORT=8001
+
+# 暴露端口
+EXPOSE 8001
+
+# 启动命令
+CMD ["/root/miniconda3/bin/conda", "run", "-n", "ocr-service", "python", "run.py"]
