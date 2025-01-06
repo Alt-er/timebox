@@ -332,7 +332,7 @@ function compareRecentScreenshotsAndDelete(
       // console.log(`当前截图与第${i + 1}张截图的相似度: ${similarity}%`);
       if (parseFloat(similarity) >= readConfig().similarityThreshold) {
         console.log(
-          `���前截图与第${
+          `当前截图与第${
             i + 1
           }张截图的相似度: ${similarity}%，删除文件: ${filePath}`
         );
@@ -394,12 +394,8 @@ function hammingDistance(binary1: string, binary2: string): number {
 async function readMetadata(filePath: string) {
   try {
     const metadata = await sharp(filePath).metadata();
-    if (metadata.exif) {
-      const base64Data = metadata.exif.toString('binary');
-      const jsonStr = Buffer.from(base64Data, 'base64').toString();
-      const data = JSON.parse(jsonStr);
-      console.log("窗口信息:", data);
-    }
+    console.log("图片元数据:", metadata);
+    console.log("EXIF 数据:", metadata.exif);
   } catch (error) {
     console.error("读取元数据失败:", error);
   }
