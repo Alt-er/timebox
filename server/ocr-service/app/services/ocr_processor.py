@@ -56,15 +56,16 @@ class OCRWorker:
         start_time = time.time()
         
         try:
-            image = Image.open(io.BytesIO(image_bytes))
-            self.logger.info(f"开始处理图片, 尺寸: {image.size}")
-            
             if self.is_mac:
+                # Mac系统下仍需要PIL Image
                 from ocrmac import ocrmac
+                image = Image.open(io.BytesIO(image_bytes))
+                self.logger.info(f"开始处理图片, 尺寸: {image.size}")
                 result = ocrmac.OCR(image, language_preference=['zh-Hans']).recognize(px=True)
             else:
-                img_array = np.array(image)
-                result, _ = self.ocr(img_array)
+                # 非Mac系统直接使用bytes
+                self.logger.info("开始处理图片")
+                result, _ = self.ocr(image_bytes)
                 
             if not result:
                 return []
