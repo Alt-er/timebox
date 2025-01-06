@@ -9,6 +9,7 @@ from PIL import Image
 import numpy as np
 import io
 from app.core.config import settings
+import time
 
 def setup_logger(name: str) -> logging.Logger:
     """配置日志器"""
@@ -52,6 +53,8 @@ class OCRWorker:
 
     def process_image(self, image_bytes: bytes) -> List[Dict[str, Any]]:
         """处理单张图片"""
+        start_time = time.time()
+        
         try:
             image = Image.open(io.BytesIO(image_bytes))
             self.logger.info(f"开始处理图片, 尺寸: {image.size}")
@@ -79,10 +82,14 @@ class OCRWorker:
                     'position': position
                 })
             
+            process_time = time.time() - start_time
+            self.logger.info(f"图片处理完成, 耗时: {process_time:.2f}秒")
+            
             return processed_results
             
         except Exception as e:
-            self.logger.error(f"图片处理错误: {e}")
+            process_time = time.time() - start_time
+            self.logger.error(f"图片处理错误: {e}, 耗时: {process_time:.2f}秒")
             raise
 
 class OCRProcessor:
@@ -95,6 +102,7 @@ class OCRProcessor:
         
     @staticmethod
     def _initialize_worker():
+        """为每个进程初始化一个 OCRWorker 实例"""
         mp.current_process().worker = OCRWorker()
 
     def _initialize(self):
@@ -107,16 +115,18 @@ class OCRProcessor:
             self._semaphore = asyncio.Semaphore(settings.OCR_NUM_WORKERS)
             self.logger.info(f"OCR进程池初始化完成, 工作进程数: {settings.OCR_NUM_WORKERS}")
 
+    @staticmethod
+    def _process_image(image_bytes: bytes) -> List[Dict[str, Any]]:
+        """处理单张图片的包装方法"""
+        return mp.current_process().worker.process_image(image_bytes)
+
     async def process_image_async(self, image_bytes: bytes) -> List[Dict[str, Any]]:
         """异步处理图片"""
         async with self._semaphore:
             try:
+                future = self._pool.apply_async(self._process_image, (image_bytes,))
                 loop = asyncio.get_running_loop()
-                result = await loop.run_in_executor(
-                    None,
-                    self._pool.apply_async,
-                    func=lambda: mp.current_process().worker.process_image(image_bytes)
-                ).get()
+                result = await loop.run_in_executor(None, future.get)
                 return result
             except Exception as e:
                 self.logger.error(f"异步处理失败: {e}")
