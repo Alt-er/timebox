@@ -9,7 +9,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
       POSTGRES_DB: ${POSTGRES_DB:-app_db}
-      TZ: Asia/Shanghai
+      TZ: ${TZ:-Asia/Shanghai}
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
@@ -21,7 +21,7 @@ services:
       retries: 5
 
   ocr-service:
-    image: alterzz/timebox-ocr-service
+    image: ${USE_CUDA:-false} == "true" && "alterzz/timebox-ocr-service-cuda:latest" || "alterzz/timebox-ocr-service:latest"
     container_name: ocr-service
     environment:
       - PROJECT_NAME=OCR Service
@@ -30,11 +30,12 @@ services:
       - OCR_SERVER_PORT=8001
       - USE_DML=${USE_DML:-false}
       - OCR_NUM_WORKERS=${OCR_NUM_WORKERS:-1}
+      - TZ=${TZ:-Asia/Shanghai}
     # ports:
     #   - "8001:8001"
 
   core-service:
-    image: alterzz/timebox-core-service
+    image: alterzz/timebox-core-service:latest
     container_name: core-service
     environment:
       - PROJECT_NAME=Core Service
@@ -50,6 +51,7 @@ services:
       - DEFAULT_USERNAME=${DEFAULT_USERNAME:-admin}
       - DEFAULT_PASSWORD=${DEFAULT_PASSWORD:-defaultpassword}
       - OCR_CONCURRENT_LIMIT=${OCR_CONCURRENT_LIMIT:-1}
+      - TZ=${TZ:-Asia/Shanghai}
     volumes:
       - ./uploads:/app/uploads
     ports:
