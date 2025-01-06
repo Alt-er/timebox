@@ -1,3 +1,5 @@
+#### [简体中文](README-zh_CN.md)
+
 # Timebox
 
 > Make every screen moment a touchable memory
