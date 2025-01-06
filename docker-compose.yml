@@ -1,5 +1,14 @@
 version: '3.8'
 
+x-gpu-config: &gpu-config
+  deploy:
+    resources:
+      reservations:
+        devices:
+          - driver: nvidia
+            count: all
+            capabilities: [gpu]
+
 services:
   postgres:
     # image: postgres:latest
@@ -33,6 +42,7 @@ services:
       - TZ=${TZ:-Asia/Shanghai}
     # ports:
     #   - "8001:8001"
+    <<: ${USE_CUDA:+&gpu-config}
 
   core-service:
     image: alterzz/timebox-core-service:latest
