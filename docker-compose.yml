@@ -39,7 +39,8 @@ services:
           devices:
             - driver: ${USE_CUDA:+nvidia}
               count: ${USE_CUDA:+all}
-              capabilities: ${USE_CUDA:+[gpu]}
+              capabilities: 
+                - ${USE_CUDA:+gpu}
 
   core-service:
     image: alterzz/timebox-core-service:latest
