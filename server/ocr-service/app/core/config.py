@@ -5,7 +5,7 @@ class Settings(BaseSettings):
     # OCR服务配置
     PROJECT_NAME: str = "OCR Service"
     OCR_API_TOKEN: str = "your-secret-ocr-token"  # 这里设置固定的token
-    USE_GPU: bool = False  # 添加GPU配置选项
+    USE_CUDA: bool = False  # 添加GPU配置选项
     USE_DML: bool = False  # 添加DML配置选项
     
     # CORS配置
