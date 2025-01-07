@@ -24,17 +24,21 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # 添加 Node.js 环境
+      # 设置 Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '18'
+          node-version: '20'
+
+      # 安装 yarn
+      - name: Install Yarn
+        run: npm install -g yarn
 
       # 构建前端项目
       - name: Build Frontend
         run: |
           cd client
-          yarn
+          yarn install
           yarn build
           
       # 复制构建文件到 core-service
