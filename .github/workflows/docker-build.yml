@@ -15,9 +15,9 @@ jobs:
     strategy:
       matrix:
         dockerfile: [
-          { path: './server/core-service/Dockerfile', name: 'core-service', context: './server/core-service' },
-          { path: './server/ocr-service/Dockerfile', name: 'ocr-service', context: './server/ocr-service' },
-          { path: './server/ocr-service/Dockerfile.cuda', name: 'ocr-service-cuda', context: './server/ocr-service' }
+          { path: './server/core-service/Dockerfile', name: 'timebox-core-service', context: './server/core-service' },
+          { path: './server/ocr-service/Dockerfile', name: 'timebox-ocr-service', context: './server/ocr-service' },
+          { path: './server/ocr-service/Dockerfile.cuda', name: 'timebox-ocr-service-cuda', context: './server/ocr-service' }
         ]
 
     steps:
