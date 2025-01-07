@@ -15,10 +15,9 @@ jobs:
     strategy:
       matrix:
         dockerfile: [
-           { path: './server/core-service/Dockerfile', name: 'core-service' },
-          { path: './server/ocr-service/Dockerfile', name: 'ocr-service' },
-          { path: './server/ocr-service/Dockerfile.cuda', name: 'ocr-service-cuda' }
-          # 添加更多 Dockerfile
+          { path: './server/core-service/Dockerfile', name: 'core-service', context: './server/core-service' },
+          { path: './server/ocr-service/Dockerfile', name: 'ocr-service', context: './server/ocr-service' },
+          { path: './server/ocr-service/Dockerfile.cuda', name: 'ocr-service-cuda', context: './server/ocr-service' }
         ]
 
     steps:
@@ -34,7 +33,7 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v4
         with:
-          context: .
+          context: ${{ matrix.dockerfile.context }}
           file: ${{ matrix.dockerfile.path }}
           push: true
           tags: |
